@@ -1,0 +1,19 @@
+{:project-title "Sample System'"
+ :project-description "(optional)"
+ :author "Kazushiro Abo"
+ :templates {;:entrypoint  "entrypoint-template.js"
+             :entrypoint  "entrypoint-template-page.js"
+             :action      "action-template.js"
+             :reducer     "reducer-template.js"
+             :view        "view-template.js"}
+ :component {
+   :name "Sample"
+   :entrypoint "sample.js"
+   :html-use-prefix false
+   :html-elements [{:id "criteriaName" :type :TEXT}
+                   {:id "criteriaHide" :type :CHECK}
+                   {:id "resultList" :type :TABLE}
+                   {:id "findButton" :type :BUTTON :action "findStaff"}
+                   ]
+ }
+}
