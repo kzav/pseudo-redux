@@ -7,6 +7,7 @@ import * as view from './views/{{component-name}}View';
 
 (function () {
 
+    // 初期状態定義
     const initialState = {
     };
 
@@ -17,8 +18,10 @@ import * as view from './views/{{component-name}}View';
         {{/action-elements}}
     ];
 
+    // ストア生成
     const store = new Store(initialState, reducers);
 
+    // 初期設定
     window.onload = function () {
         // 操作とアクションをバインド
         {{#bind-elements}}
