@@ -20,9 +20,17 @@
                :BUTTON "click"
                :TABLE  "select"})
 
-(defn foo
-  [x]
-  (println x "Hello, World!"))
+; 要素タイプの和名
+(def type-name-JP {:LABEL  "ラベル"
+                   :TEXT   "テキスト"
+                   :CHECK  "チェックボックス"
+                   :SELECT "ドロップダウンリスト"
+                   :BUTTON "ボタン"
+                   :TABLE  "テーブル"})
+
+; 動詞の和名
+(def verb-name-JP {"change" "変更"
+                   "select" "選択"})
 
 (defn camel-to-snake
   [s]
@@ -64,7 +72,10 @@
         html-use-prefix (get-in defs [:component :html-use-prefix])
         html-elements   (get-in defs [:component :html-elements])
         action-map      {:elements (for [x html-elements]
-                                     (let [name (if (contains? x :action)
+                                     (let [verb-string (if (contains? x :action)
+                                                         (:action x)
+                                                         ((:type x) verb-map))
+                                           name (if (contains? x :action)
                                                   (:action x)
                                                   (verb (:id x) (:type x)))]
                                        {:id             (:id x)
@@ -75,7 +86,7 @@
                                                             name))
                                         :name           name
                                         :comment        (if-let [v (:name x)]
-                                                          v
+                                                          (str v (get verb-name-JP verb-string))
                                                           name)}))}]
     action-map))
 
@@ -94,7 +105,7 @@
                                         :name           name
                                         :event          ((:type x) event-map)
                                         :comment        (if-let [v (:name x)]
-                                                          v
+                                                          (str v ((:type x) type-name-JP))
                                                           name)}))}]
     view-map))
 
@@ -129,6 +140,10 @@
   (let [defs (read-def path)]
     (doseq [x (:templates defs)]
       (output-file x defs))))
+
+(defn foo
+  [x]
+  (println x "Hello, World!"))
 
 (defn -main
   [& args]

@@ -10,10 +10,10 @@
    :name "Sample"
    :entrypoint "sample.js"
    :html-use-prefix false
-   :html-elements [{:id "criteriaName" :type :TEXT}
-                   {:id "criteriaHide" :type :CHECK}
-                   {:id "resultList" :type :TABLE}
-                   {:id "findButton" :type :BUTTON :action "findStaff"}
+   :html-elements [{:id "criteriaName" :name "検索条件:氏名":type :TEXT}
+                   {:id "criteriaHide" :name "検索条件:非表示" :type :CHECK}
+                   {:id "resultList" :name "検索結果一覧" :type :TABLE}
+                   {:id "findButton" :name "スタッフ検索" :type :BUTTON :action "findStaff"}
                    ]
  }
 }
