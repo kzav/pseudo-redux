@@ -5,7 +5,7 @@ import * as actionCreator from '../actions/{{component-name}}Action';
 {{#action-elements}}
 // {{comment}}
 export function {{name}}(action, state, dispatcher) {
-    // TODO
+    {{action-code}}
     return state;
 }
 

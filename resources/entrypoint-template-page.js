@@ -9,6 +9,9 @@ import * as view from './views/{{component-name}}View';
 
     // 初期状態定義
     const initialState = {
+        {{#state-elements}}
+        {{state-id}}: {{{state-value}}},
+        {{/state-elements}}
     };
 
     const reducers = [

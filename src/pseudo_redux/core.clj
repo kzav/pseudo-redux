@@ -66,8 +66,22 @@
   [defs]
   {:component-name (get-in defs [:component :name])})
 
-(defn action-map
+(defn state-map
   [defs]
+  (let [html-elements (get-in defs [:component :html-elements])
+        state-map     {:elements (for [x html-elements :when (some #(= (:type x) %) [:TEXT :SELECT])]
+                                   {:id             (:id x)
+                                    :state-id (case (:type x)
+                                                :TEXT (:id x)
+                                                :SELECT (str "selected" (camel-to-pascal (:id x))))
+                                    :state-value (case (:type x)
+                                                   :TEXT "\"\""
+                                                   :SELECT "null")
+                                    })}]
+    state-map))
+
+(defn action-map
+  [defs state]
   (let [component-name  (get-in defs [:component :name])
         html-use-prefix (get-in defs [:component :html-use-prefix])
         html-elements   (get-in defs [:component :html-elements])
@@ -87,18 +101,30 @@
                                         :name           name
                                         :comment        (if-let [v (:name x)]
                                                           (str v (get verb-name-JP verb-string))
-                                                          name)}))}]
+                                                          name)
+                                        :action-value   (case (:type x)
+                                                          :TEXT   "currentTarget.value"
+                                                          :SELECT "currentTarget.options[currentTarget.selectedIndex]"
+                                                          "currentTarget"
+                                                          )
+                                        :action-code    (case (:type x)
+                                                          :TEXT   (str "state." (:state-id (first (filter #(= (:id %) (:id x)) state))) " = action.payload;")
+                                                          :SELECT (str "state." (:state-id (first (filter #(= (:id %) (:id x)) state))) " = action.payload;")
+                                                          "// TODO"
+                                                          )
+                                        }))}]
     action-map))
 
 (defn view-map
-  [defs]
+  [defs state]
   (let [component-name  (get-in defs [:component :name])
         html-use-prefix (get-in defs [:component :html-use-prefix])
         html-elements   (get-in defs [:component :html-elements])
         view-map        {:elements (for [x html-elements]
-                                     (let [name (camel-to-pascal (:id x))]
+                                     (let [name (camel-to-pascal (:id x))
+                                           id-descriptor (camel-to-snake (:id x))]
                                        {:id             (:id x)
-                                        :id-descriptor  (camel-to-snake (:id x))
+                                        :id-descriptor  id-descriptor
                                         :id-value       (if html-use-prefix
                                                           (prefixed-name component-name (:id x))
                                                           (:id x))
@@ -106,21 +132,50 @@
                                         :event          ((:type x) event-map)
                                         :comment        (if-let [v (:name x)]
                                                           (str v ((:type x) type-name-JP))
-                                                          name)}))}]
+                                                          name)
+                                        :view-code      (case (:type x)
+                                                          :TEXT (str
+"    let input = core.getElement("
+id-descriptor
+");
+    input.value = state."
+(:state-id (first (filter #(= (:id %) (:id x)) state)))
+";
+    return input;")
+                                                          :SELECT (str
+"    let input = core.getElement("
+id-descriptor
+");
+    input.value = state."
+(:state-id (first (filter #(= (:id %) (:id x)) state)))
+".value;
+    return input;")
+                                                          :BUTTON (str
+"    let input = core.getElement("
+id-descriptor
+");
+    return input;")
+"    // TODO
+    return null;"
+                                                          )
+                                        }))}]
     view-map))
 
 (defn variable-map
   [key defs]
   (let [common-map  (common-map defs)
-        action-map  (action-map defs)
-        view-map    (view-map defs)]
+        state-map   (state-map defs)
+        action-map  (action-map defs state-map)
+        view-map    (view-map defs state-map)]
     (if (or (= key :action) (= key :reducer))
       (-> common-map
+          (assoc :state-elements (:elements state-map))
           (assoc :action-elements (:elements action-map)))
       (if (= key :view)
         (-> common-map
             (assoc :view-elements (:elements view-map)))
         (-> common-map
+            (assoc :state-elements (:elements state-map))
             (assoc :view-elements (:elements view-map))
             (assoc :action-elements (:elements action-map))
             (assoc :bind-elements (for [x (:elements view-map) y (:elements action-map)

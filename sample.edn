@@ -11,6 +11,7 @@
    :entrypoint "sample.js"
    :html-use-prefix false
    :html-elements [{:id "criteriaName" :name "検索条件:氏名":type :TEXT}
+                   {:id "criteriaType" :name "検索条件:種別" :type :SELECT}
                    {:id "criteriaHide" :name "検索条件:非表示" :type :CHECK}
                    {:id "resultList" :name "検索結果一覧" :type :TABLE}
                    {:id "findButton" :name "スタッフ検索" :type :BUTTON :action "findStaff"}

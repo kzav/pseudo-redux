@@ -16,7 +16,7 @@ export const {{id-descriptor}} = "{{id-value}}";
 export function {{name}}Action({currentTarget}) {
     return {
         type: {{id-descriptor}},
-        payload: currentTarget,
+        payload: {{action-value}},
     };
 }
 
