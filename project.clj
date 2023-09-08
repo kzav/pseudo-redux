@@ -11,4 +11,4 @@
   :profiles
   {:uberjar {:omit-source true
              :aot :all
-             :uberjar-name "pseudo-redux.jar"}})
+             :uberjar-name "pseudo-redux-0.2.0.jar"}})
