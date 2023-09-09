@@ -32,6 +32,7 @@
 (def verb-name-JP {"change" "変更"
                    "select" "選択"})
 
+; キャメルタイプをスネークタイプに変換
 (defn camel-to-snake
   [s]
   (let [snake (s/upper-case (s/replace s #"([A-Z])" "_$1"))]
@@ -39,54 +40,118 @@
       (subs snake 1)
       snake)))
 
+; キャメルタイプをパスカルタイプに変換
 (defn camel-to-pascal
   [s]
   (str (s/upper-case (subs s 0 1)) (subs s 1)))
 
+; プレフィクス名
 (defn prefixed-name
   [prefix name]
   (str prefix "_" name))
 
+; 動詞
 (defn verb
   [id type]
   (str (type verb-map) (camel-to-pascal id)))
 
+; 定義ファイルを読み込む
 (defn read-def
   [path]
   (let [reader (PushbackReader. (io/reader path))]
     (edn/read reader)))
 
+; 出力名
 (defn output-name
   [key defs]
   (if (= key :entrypoint)
     (get-in defs [:component :entrypoint])
     (str (get-in defs [:component :name]) (s/upper-case (subs (name key) 0 1)) (subs (name key) 1) ".js")))
 
+; 共通マップ
 (defn common-map
   [defs]
   {:component-name (get-in defs [:component :name])})
 
-;; 状態識別子
-;(defmulti state-id (fn [element] (:type element)))
-;
-;; 状態識別子
-;(defmethod state-id :book [book]
-;  (str (:title book) "/" (:author book)))
+; 状態識別子
+(defmulti state-id (fn [element] (:type element)))
 
+; テキスト型の状態識別子
+(defmethod state-id :text
+  [element]
+  (:id element))
+
+; ドロップダウンリスト型の状態識別子
+(defmethod state-id :select
+  [element]
+  (str "selected" (camel-to-pascal (:id element))))
+
+; その他の状態識別子
+(defmethod state-id :default
+  [element]
+  nil)
+
+; 状態初期値
+(defmulti state-value (fn [element] (:type element)))
+
+; テキスト型の状態初期値
+(defmethod state-value :text
+  [element]
+  "\"\"")
+
+; その他の状態初期値
+(defmethod state-value :default
+  [element]
+  "null")
+
+; 状態要素マップ
 (defn state-map
   [defs]
   (let [html-elements (get-in defs [:component :html-elements])
         state-map     {:elements (for [x html-elements :when (some #(= (:type x) %) [:text :select])]
-                                   {:id             (:id x)
-                                    :state-id (case (:type x)
-                                                :text (:id x)
-                                                :select (str "selected" (camel-to-pascal (:id x))))
-                                    :state-value (case (:type x)
-                                                   :text "\"\""
-                                                   :select "null")
+                                   {:id           (:id x)
+                                    :state-id     (state-id x)
+                                    :state-value  (state-value x)
                                     })}]
     state-map))
 
+; アクション取得値
+(defmulti action-value (fn [element] (:type element)))
+
+; テキスト型のアクション取得値
+(defmethod action-value :text
+  [element]
+  "currentTarget.value")
+
+; ドロップダウンリスト型のアクション取得値
+(defmethod action-value :select
+  [element]
+  "currentTarget.options[currentTarget.selectedIndex]")
+
+; その他のアクション取得値
+(defmethod action-value :default
+  [element]
+  "currentTarget")
+
+; リデューサ実装
+(defmulti action-code (fn [element state] (:type element)))
+
+; テキスト型のリデューサ実装
+(defmethod action-code :text
+  [element state]
+  (str "state." (:state-id (first (filter #(= (:id %) (:id element)) state))) " = action.payload;"))
+
+; ドロップダウンリスト型のリデューサ実装
+(defmethod action-code :select
+  [element state]
+  (str "state." (:state-id (first (filter #(= (:id %) (:id element)) state))) " = action.payload;"))
+
+; その他のリデューサ実装
+(defmethod action-code :default
+  [element state]
+  "// TODO")
+
+; アクション要素マップ
 (defn action-map
   [defs state-map]
   (let [component-name  (get-in defs [:component :name])
@@ -110,19 +175,54 @@
                                         :comment        (if-let [v (:name x)]
                                                           (str v (get verb-name-JP verb-string))
                                                           name)
-                                        :action-value   (case (:type x)
-                                                          :text   "currentTarget.value"
-                                                          :select "currentTarget.options[currentTarget.selectedIndex]"
-                                                          "currentTarget"
-                                                          )
-                                        :action-code    (case (:type x)
-                                                          :text   (str "state." (:state-id (first (filter #(= (:id %) (:id x)) state))) " = action.payload;")
-                                                          :select (str "state." (:state-id (first (filter #(= (:id %) (:id x)) state))) " = action.payload;")
-                                                          "// TODO"
-                                                          )
+                                        :action-value   (action-value x)
+                                        :action-code    (action-code x state)
                                         }))}]
     action-map))
 
+; ビュー実装
+(defmulti view-code (fn [element state id-descriptor] (:type element)))
+
+; テキスト型のビュー実装
+(defmethod view-code :text
+  [element state id-descriptor]
+  (str
+"    let input = core.getElement("
+id-descriptor
+");
+    input.value = state."
+(:state-id (first (filter #(= (:id %) (:id element)) state)))
+";
+    return input;"))
+
+; ドロップダウンリスト型のビュー実装
+(defmethod view-code :select
+  [element state id-descriptor]
+  (str
+"    let input = core.getElement("
+id-descriptor
+");
+    input.value = state."
+(:state-id (first (filter #(= (:id %) (:id element)) state)))
+".value;
+    return input;"))
+
+; ボタン型のビュー実装
+(defmethod view-code :button
+  [element state id-descriptor]
+  (str
+"    let input = core.getElement("
+id-descriptor
+");
+    return input;"))
+
+; その他のビュー実装
+(defmethod view-code :default
+  [element state id-descriptor]
+"    // TODO
+    return null;")
+
+; ビュー要素マップ
 (defn view-map
   [defs state-map]
   (let [component-name  (get-in defs [:component :name])
@@ -142,34 +242,11 @@
                                         :comment        (if-let [v (:name x)]
                                                           (str v ((:type x) type-name-JP))
                                                           name)
-                                        :view-code      (case (:type x)
-                                                          :text (str
-"    let input = core.getElement("
-id-descriptor
-");
-    input.value = state."
-(:state-id (first (filter #(= (:id %) (:id x)) state)))
-";
-    return input;")
-                                                          :select (str
-"    let input = core.getElement("
-id-descriptor
-");
-    input.value = state."
-(:state-id (first (filter #(= (:id %) (:id x)) state)))
-".value;
-    return input;")
-                                                          :button (str
-"    let input = core.getElement("
-id-descriptor
-");
-    return input;")
-"    // TODO
-    return null;"
-                                                          )
+                                        :view-code      (view-code x state id-descriptor)
                                         }))}]
     view-map))
 
+; バインド変数マップ
 (defn variable-map
   [key defs]
   (let [common-map  (common-map defs)
@@ -192,6 +269,7 @@ id-descriptor
                                     {:bind-name (:name x)
                                      :action-name (:name y)})))))))
 
+; ソースファイルを出力
 (defn output-file
   [template defs]
   (spit
