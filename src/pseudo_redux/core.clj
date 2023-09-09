@@ -81,10 +81,11 @@
     state-map))
 
 (defn action-map
-  [defs state]
+  [defs state-map]
   (let [component-name  (get-in defs [:component :name])
         html-use-prefix (get-in defs [:component :html-use-prefix])
         html-elements   (get-in defs [:component :html-elements])
+        state           (:elements state-map)
         action-map      {:elements (for [x html-elements]
                                      (let [verb-string (if (contains? x :action)
                                                          (:action x)
@@ -116,10 +117,11 @@
     action-map))
 
 (defn view-map
-  [defs state]
+  [defs state-map]
   (let [component-name  (get-in defs [:component :name])
         html-use-prefix (get-in defs [:component :html-use-prefix])
         html-elements   (get-in defs [:component :html-elements])
+        state           (:elements state-map)
         view-map        {:elements (for [x html-elements]
                                      (let [name (camel-to-pascal (:id x))
                                            id-descriptor (camel-to-snake (:id x))]
