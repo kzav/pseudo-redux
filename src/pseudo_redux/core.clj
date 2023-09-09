@@ -6,27 +6,27 @@
   (:import (java.io PushbackReader))
   (:gen-class))
 
-(def event-map {:LABEL  "click"
-                :TEXT   "change"
-                :CHECK  "click"
-                :SELECT "change"
-                :BUTTON "click"
-                :TABLE  "click"})
+(def event-map {:label  "click"
+                :text   "change"
+                :check  "click"
+                :select "change"
+                :button "click"
+                :table  "click"})
 
-(def verb-map {:LABEL  ""
-               :TEXT   "change"
-               :CHECK  "change"
-               :SELECT "change"
-               :BUTTON "click"
-               :TABLE  "select"})
+(def verb-map {:label  ""
+               :text   "change"
+               :check  "change"
+               :select "change"
+               :button "click"
+               :table  "select"})
 
 ; 要素タイプの和名
-(def type-name-JP {:LABEL  "ラベル"
-                   :TEXT   "テキスト"
-                   :CHECK  "チェックボックス"
-                   :SELECT "ドロップダウンリスト"
-                   :BUTTON "ボタン"
-                   :TABLE  "テーブル"})
+(def type-name-JP {:label  "ラベル"
+                   :text   "テキスト"
+                   :check  "チェックボックス"
+                   :select "ドロップダウンリスト"
+                   :button "ボタン"
+                   :table  "テーブル"})
 
 ; 動詞の和名
 (def verb-name-JP {"change" "変更"
@@ -66,17 +66,24 @@
   [defs]
   {:component-name (get-in defs [:component :name])})
 
+;; 状態識別子
+;(defmulti state-id (fn [element] (:type element)))
+;
+;; 状態識別子
+;(defmethod state-id :book [book]
+;  (str (:title book) "/" (:author book)))
+
 (defn state-map
   [defs]
   (let [html-elements (get-in defs [:component :html-elements])
-        state-map     {:elements (for [x html-elements :when (some #(= (:type x) %) [:TEXT :SELECT])]
+        state-map     {:elements (for [x html-elements :when (some #(= (:type x) %) [:text :select])]
                                    {:id             (:id x)
                                     :state-id (case (:type x)
-                                                :TEXT (:id x)
-                                                :SELECT (str "selected" (camel-to-pascal (:id x))))
+                                                :text (:id x)
+                                                :select (str "selected" (camel-to-pascal (:id x))))
                                     :state-value (case (:type x)
-                                                   :TEXT "\"\""
-                                                   :SELECT "null")
+                                                   :text "\"\""
+                                                   :select "null")
                                     })}]
     state-map))
 
@@ -104,13 +111,13 @@
                                                           (str v (get verb-name-JP verb-string))
                                                           name)
                                         :action-value   (case (:type x)
-                                                          :TEXT   "currentTarget.value"
-                                                          :SELECT "currentTarget.options[currentTarget.selectedIndex]"
+                                                          :text   "currentTarget.value"
+                                                          :select "currentTarget.options[currentTarget.selectedIndex]"
                                                           "currentTarget"
                                                           )
                                         :action-code    (case (:type x)
-                                                          :TEXT   (str "state." (:state-id (first (filter #(= (:id %) (:id x)) state))) " = action.payload;")
-                                                          :SELECT (str "state." (:state-id (first (filter #(= (:id %) (:id x)) state))) " = action.payload;")
+                                                          :text   (str "state." (:state-id (first (filter #(= (:id %) (:id x)) state))) " = action.payload;")
+                                                          :select (str "state." (:state-id (first (filter #(= (:id %) (:id x)) state))) " = action.payload;")
                                                           "// TODO"
                                                           )
                                         }))}]
@@ -136,7 +143,7 @@
                                                           (str v ((:type x) type-name-JP))
                                                           name)
                                         :view-code      (case (:type x)
-                                                          :TEXT (str
+                                                          :text (str
 "    let input = core.getElement("
 id-descriptor
 ");
@@ -144,7 +151,7 @@ id-descriptor
 (:state-id (first (filter #(= (:id %) (:id x)) state)))
 ";
     return input;")
-                                                          :SELECT (str
+                                                          :select (str
 "    let input = core.getElement("
 id-descriptor
 ");
@@ -152,7 +159,7 @@ id-descriptor
 (:state-id (first (filter #(= (:id %) (:id x)) state)))
 ".value;
     return input;")
-                                                          :BUTTON (str
+                                                          :button (str
 "    let input = core.getElement("
 id-descriptor
 ");
@@ -192,16 +199,38 @@ id-descriptor
     (parser/render-resource (val template) (variable-map (key template) defs))
     :encoding "UTF-8"))
 
+; キーワードを小文字に変換
+(defn to-lower-case-keyword
+  [kw]
+  (keyword (s/replace (s/lower-case kw) ":" "")))
+
+; HTML要素タイプのキーワードを小文字に変換
+(defn convert-html-element-type-keyword-to-lower-case
+  [element]
+  (-> element
+      (assoc :type (to-lower-case-keyword (:type element)))))
+
+; 全HTML要素タイプのキーワードを小文字に変換
+(defn convert-all-html-element-type-keyword-to-lower-case
+  [defs]
+  (let [before  (get-in defs [:component :html-elements])
+        after   (map convert-html-element-type-keyword-to-lower-case before)]
+    (-> defs
+        (assoc-in [:component :html-elements] after))))
+
+; pdx本体関数
 (defn pdx
   [path]
-  (let [defs (read-def path)]
+  (let [defs (convert-all-html-element-type-keyword-to-lower-case (read-def path))]
     (doseq [x (:templates defs)]
       (output-file x defs))))
 
+; テスト
 (defn foo
   [x]
   (println x "Hello, World!"))
 
+; エントリーポイント(main関数)
 (defn -main
   [& args]
   ;(foo (first args)))
