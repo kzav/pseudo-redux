@@ -25,7 +25,7 @@ export function renderAll(state) {
 {{#view-elements}}
 // {{comment}}を描画
 export function render{{name}}(state) {
-{{view-code}}
+{{{view-code}}}
 }
 
 {{/view-elements}}

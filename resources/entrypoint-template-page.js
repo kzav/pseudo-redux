@@ -17,7 +17,7 @@ import * as view from './views/{{component-name}}View';
     const reducers = [
         // アクション/リデューサ/ビューの関連を定義
         {{#action-elements}}
-            [ action.{{id-descriptor}}, reducer.{{name}},   null],
+        [ action.{{id-descriptor}}, reducer.{{name}},   null],
         {{/action-elements}}
     ];
 
@@ -28,7 +28,7 @@ import * as view from './views/{{component-name}}View';
     window.onload = function () {
         // 操作とアクションをバインド
         {{#bind-elements}}
-            view.bind{{bind-name}}(e => store.dispatch(action.{{action-name}}Action(e)));
+        view.bind{{bind-name}}(e => store.dispatch(action.{{action-name}}Action(e)));
         {{/bind-elements}}
     };
 })();

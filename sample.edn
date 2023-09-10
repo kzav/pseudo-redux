@@ -10,9 +10,12 @@
    :name "Sample"
    :entrypoint "sample.js"
    :html-use-prefix false
-   :html-elements [{:id "criteriaName" :name "検索条件:氏名" :type :text}
-                   {:id "criteriaType" :name "検索条件:種別" :type :select}
-                   {:id "criteriaHide" :name "検索条件:非表示" :type :check}
+   :html-elements [{:id "criteriaName" :name "検索条件：氏名" :type :text}
+                   {:id "criteriaType" :name "検索条件：種別" :type :select}
+                   {:id "criteriaHide" :name "検索条件：非表示" :type :check}
+                   {:id "criteriaGenderMale" :name "検索条件：性別(男)" :type :radio :group "criteriaGender"}
+                   {:id "criteriaGenderFemale" :name "検索条件：性別(女)" :type :radio :group "criteriaGender"}
+                   {:id "criteriaGenderOther" :name "検索条件：性別(その他)" :type :radio :group "criteriaGender"}
                    {:id "resultList" :name "検索結果一覧" :type :table}
                    {:id "findButton" :name "スタッフ検索" :type :button :action "findStaff"}
                    ]

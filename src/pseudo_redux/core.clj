@@ -8,23 +8,26 @@
 
 (def event-map {:label  "click"
                 :text   "change"
-                :check  "click"
                 :select "change"
+                :check  "click"
+                :radio  "change"
                 :button "click"
                 :table  "click"})
 
 (def verb-map {:label  ""
                :text   "change"
-               :check  "change"
                :select "change"
+               :check  "change"
+               :radio  "change"
                :button "click"
                :table  "select"})
 
 ; 要素タイプの和名
 (def type-name-JP {:label  "ラベル"
                    :text   "テキスト"
-                   :check  "チェックボックス"
                    :select "ドロップダウンリスト"
+                   :check  "チェックボックス"
+                   :radio  "ラジオボタン"
                    :button "ボタン"
                    :table  "テーブル"})
 
@@ -50,6 +53,14 @@
   [prefix name]
   (str prefix "_" name))
 
+; コメントを省略
+(defn abbreviate-comment
+  [s]
+  (-> s
+      (s/replace #":.+" "")
+      (s/replace #"/.+" "")
+      (s/replace #"\(.+" "")))
+
 ; 動詞
 (defn verb
   [id type]
@@ -73,6 +84,10 @@
   [defs]
   {:component-name (get-in defs [:component :name])})
 
+;------------------------------------------------------------------------------
+; 状態
+;------------------------------------------------------------------------------
+
 ; 状態識別子
 (defmulti state-id (fn [element] (:type element)))
 
@@ -85,6 +100,11 @@
 (defmethod state-id :select
   [element]
   (str "selected" (camel-to-pascal (:id element))))
+
+; ラジオボタン型の状態識別子
+(defmethod state-id :radio
+  [element]
+  (str "selected" (camel-to-pascal (:group element))))
 
 ; その他の状態識別子
 (defmethod state-id :default
@@ -99,6 +119,11 @@
   [element]
   "\"\"")
 
+; ラジオボタン型の状態初期値
+(defmethod state-value :radio
+  [element]
+  "\"\"")
+
 ; その他の状態初期値
 (defmethod state-value :default
   [element]
@@ -107,13 +132,60 @@
 ; 状態要素マップ
 (defn state-map
   [defs]
-  (let [html-elements (get-in defs [:component :html-elements])
-        state-map     {:elements (for [x html-elements :when (some #(= (:type x) %) [:text :select])]
-                                   {:id           (:id x)
-                                    :state-id     (state-id x)
-                                    :state-value  (state-value x)
-                                    })}]
+  (let [html-elements   (get-in defs [:component :html-elements])
+        unit-elements   (filter #(nil? (:group %)) html-elements)
+        group-elements  (filter #(not (nil? (:group %))) html-elements)
+        unit-state      (for [x unit-elements :when (some #(= (:type x) %) [:text :select])]
+                          {:id           (:id x)
+                           :state-id     (state-id x)
+                           :state-value  (state-value x)
+                           })
+        group-state     (if (empty? group-elements)
+                          []
+                          (for [x (group-by :group group-elements)]
+                            (let [group-id  (key x)
+                                  element   (first (val x))]
+                              {:id           group-id
+                               :state-id     (state-id element)
+                               :state-value  (state-value element)
+                               })))
+        state-map       {:elements (concat unit-state group-state)}
+        ]
     state-map))
+
+;------------------------------------------------------------------------------
+; アクション
+;------------------------------------------------------------------------------
+
+; アクションID
+(defmulti action-id (fn [element] (:type element)))
+
+; ラジオボタン型のアクションID
+(defmethod action-id :radio
+  [element]
+  (:group element))
+
+; その他のアクションID
+(defmethod action-id :default
+  [element]
+  (:id element))
+
+; アクション名
+(defmulti action-name (fn [element] (:type element)))
+
+; ラジオボタン型のアクション名
+(defmethod action-name :radio
+  [element]
+  (if (contains? element :action)
+    (:action element)
+    (verb (:group element) (:type element))))
+
+; その他のアクション名
+(defmethod action-name :default
+  [element]
+  (if (contains? element :action)
+    (:action element)
+    (verb (:id element) (:type element))))
 
 ; アクション取得値
 (defmulti action-value (fn [element] (:type element)))
@@ -128,26 +200,36 @@
   [element]
   "currentTarget.options[currentTarget.selectedIndex]")
 
+; ラジオボタン型のアクション取得値
+(defmethod action-value :radio
+  [element]
+  "util.getCheckedRadioValue(currentTarget.name)")
+
 ; その他のアクション取得値
 (defmethod action-value :default
   [element]
   "currentTarget")
 
 ; リデューサ実装
-(defmulti action-code (fn [element state] (:type element)))
+(defmulti reducer-code (fn [element state] (:type element)))
 
 ; テキスト型のリデューサ実装
-(defmethod action-code :text
+(defmethod reducer-code :text
   [element state]
   (str "state." (:state-id (first (filter #(= (:id %) (:id element)) state))) " = action.payload;"))
 
 ; ドロップダウンリスト型のリデューサ実装
-(defmethod action-code :select
+(defmethod reducer-code :select
   [element state]
   (str "state." (:state-id (first (filter #(= (:id %) (:id element)) state))) " = action.payload;"))
 
+; ラジオボタン型のリデューサ実装
+(defmethod reducer-code :radio
+  [element state]
+  (str "state." (:state-id (first (filter #(= (:id %) (:group element)) state))) " = action.payload;"))
+
 ; その他のリデューサ実装
-(defmethod action-code :default
+(defmethod reducer-code :default
   [element state]
   "// TODO")
 
@@ -156,16 +238,18 @@
   [defs state-map]
   (let [component-name  (get-in defs [:component :name])
         html-use-prefix (get-in defs [:component :html-use-prefix])
-        html-elements   (get-in defs [:component :html-elements])
+        html-elements_  (get-in defs [:component :html-elements])
+        unit-elements   (filter #(nil? (:group %)) html-elements_)
+        group-elements  (for [x (group-by :group (filter #(not (nil? (:group %))) html-elements_))]
+                          (first (val x)))
+        html-elements   (concat unit-elements group-elements)
         state           (:elements state-map)
         action-map      {:elements (for [x html-elements]
-                                     (let [verb-string (if (contains? x :action)
-                                                         (:action x)
-                                                         ((:type x) verb-map))
-                                           name (if (contains? x :action)
-                                                  (:action x)
-                                                  (verb (:id x) (:type x)))]
-                                       {:id             (:id x)
+                                     (let [verb-string  (if (contains? x :action)
+                                                          (:action x)
+                                                          ((:type x) verb-map))
+                                           name         (action-name x)]
+                                       {:id             (action-id x)
                                         :id-descriptor  (camel-to-snake name)
                                         :id-value       (camel-to-snake
                                                           (if html-use-prefix
@@ -173,10 +257,10 @@
                                                             name))
                                         :name           name
                                         :comment        (if-let [v (:name x)]
-                                                          (str v (get verb-name-JP verb-string))
+                                                          (str (abbreviate-comment v) (get verb-name-JP verb-string))
                                                           name)
                                         :action-value   (action-value x)
-                                        :action-code    (action-code x state)
+                                        :reducer-code    (reducer-code x state)
                                         }))}]
     action-map))
 
@@ -187,34 +271,45 @@
 (defmethod view-code :text
   [element state id-descriptor]
   (str
-"    let input = core.getElement("
-id-descriptor
-");
-    input.value = state."
-(:state-id (first (filter #(= (:id %) (:id element)) state)))
-";
-    return input;"))
+    "    let input = core.getElement("
+    id-descriptor
+    ");\n"
+    "    input.value = state."
+    (:state-id (first (filter #(= (:id %) (:id element)) state)))
+    ";\n"
+    "    return input;\n"))
 
 ; ドロップダウンリスト型のビュー実装
 (defmethod view-code :select
   [element state id-descriptor]
   (str
-"    let input = core.getElement("
-id-descriptor
-");
-    input.value = state."
-(:state-id (first (filter #(= (:id %) (:id element)) state)))
-".value;
-    return input;"))
+    "    let input = core.getElement("
+    id-descriptor
+    ");\n"
+    "    input.value = state."
+    (:state-id (first (filter #(= (:id %) (:id element)) state)))
+    ".value;\n"
+    "    return input;\n"))
+
+; ラジオボタン型のビュー実装
+(defmethod view-code :radio
+  [element state id-descriptor]
+  (str
+    "    util.setCheckedRadioValue(\""
+    (:group element)
+    "\", state."
+    (:state-id (first (filter #(= (:id %) (:group element)) state)))
+    ");\n"
+    "    return input;\n"))
 
 ; ボタン型のビュー実装
 (defmethod view-code :button
   [element state id-descriptor]
   (str
-"    let input = core.getElement("
-id-descriptor
-");
-    return input;"))
+    "    let input = core.getElement("
+    id-descriptor
+    ");\n"
+    "    return input;\n"))
 
 ; その他のビュー実装
 (defmethod view-code :default
@@ -233,6 +328,7 @@ id-descriptor
                                      (let [name (camel-to-pascal (:id x))
                                            id-descriptor (camel-to-snake (:id x))]
                                        {:id             (:id x)
+                                        :group          (:group x)
                                         :id-descriptor  id-descriptor
                                         :id-value       (if html-use-prefix
                                                           (prefixed-name component-name (:id x))
@@ -240,7 +336,7 @@ id-descriptor
                                         :name           name
                                         :event          ((:type x) event-map)
                                         :comment        (if-let [v (:name x)]
-                                                          (str v ((:type x) type-name-JP))
+                                                          (str (abbreviate-comment v) ((:type x) type-name-JP))
                                                           name)
                                         :view-code      (view-code x state id-descriptor)
                                         }))}]
@@ -265,7 +361,9 @@ id-descriptor
             (assoc :view-elements (:elements view-map))
             (assoc :action-elements (:elements action-map))
             (assoc :bind-elements (for [x (:elements view-map) y (:elements action-map)
-                                        :when (= (:id x) (:id y))]
+                                        :when (or
+                                                (= (:id x) (:id y))
+                                                (= (:group x) (:id y)))]
                                     {:bind-name (:name x)
                                      :action-name (:name y)})))))))
 
