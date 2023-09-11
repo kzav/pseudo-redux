@@ -370,9 +370,9 @@
             (assoc :render-elements (get-in view-map [:elements :group])))
         (-> common-map
             (assoc :state-elements (:elements state-map))
-            (assoc :view-elements (:elements view-map))
+            (assoc :view-elements (get-in view-map [:elements :unit]))
             (assoc :action-elements (:elements action-map))
-            (assoc :bind-elements (for [x (:elements view-map) y (:elements action-map)
+            (assoc :bind-elements (for [x (get-in view-map [:elements :unit]) y (:elements action-map)
                                         :when (or
                                                 (= (:id x) (:id y))
                                                 (= (:group x) (:id y)))]
