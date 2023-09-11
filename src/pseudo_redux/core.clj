@@ -277,7 +277,7 @@
     "    input.value = state."
     (:state-id (first (filter #(= (:id %) (:id element)) state)))
     ";\n"
-    "    return input;\n"))
+    "    return input;"))
 
 ; ドロップダウンリスト型のビュー実装
 (defmethod view-code :select
@@ -289,7 +289,7 @@
     "    input.value = state."
     (:state-id (first (filter #(= (:id %) (:id element)) state)))
     ".value;\n"
-    "    return input;\n"))
+    "    return input;"))
 
 ; ラジオボタン型のビュー実装
 (defmethod view-code :radio
@@ -300,7 +300,7 @@
     "\", state."
     (:state-id (first (filter #(= (:id %) (:group element)) state)))
     ");\n"
-    "    return null;\n"))
+    "    return null;"))
 
 ; ボタン型のビュー実装
 (defmethod view-code :button
@@ -309,7 +309,7 @@
     "    let input = core.getElement("
     id-descriptor
     ");\n"
-    "    return input;\n"))
+    "    return input;"))
 
 ; その他のビュー実装
 (defmethod view-code :default
