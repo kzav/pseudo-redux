@@ -1,7 +1,7 @@
 'use strict';
 
-import * as core from './view-core';
-import * as util from './view-util';
+import * as core from '../views/view-core';
+import * as util from '../views/view-util';
 
 //-----------------------------------------------------------------------------
 // HTML要素ID
