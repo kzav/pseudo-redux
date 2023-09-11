@@ -335,7 +335,7 @@
      :comment        (if-let [v (:name element)]
                        (str (if is-group (abbreviate-comment v) v) ((:type element) type-name-JP))
                        name)
-     :view-code      (view-code element state id-descriptor)
+     :view-code      (view-code element state (str "ID_" id-descriptor))
      }))
 
 ; ビュー要素マップ
