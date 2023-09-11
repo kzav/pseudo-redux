@@ -300,7 +300,7 @@
     "\", state."
     (:state-id (first (filter #(= (:id %) (:group element)) state)))
     ");\n"
-    "    return input;\n"))
+    "    return null;\n"))
 
 ; ボタン型のビュー実装
 (defmethod view-code :button
