@@ -319,8 +319,11 @@
 
 ; ビュー要素
 (defn view-element
-  [element state use-prefix component-name]
-  (let [name (camel-to-pascal (if-let [v (:group element)] v (:id element)))
+  [kw element state use-prefix component-name]
+  (let [name (camel-to-pascal (if (and (= kw :group)
+                                       (not (nil? (:group element))))
+                                (:group element)
+                                (:id element)))
         id-descriptor (camel-to-snake (:id element))]
     {:id             (:id element)
      :group          (:group element)
@@ -347,9 +350,9 @@
                           (first (val x)))
         state           (:elements state-map)
         view-map        {:elements {:unit   (for [x html-elements]
-                                              (view-element x state html-use-prefix component-name))
+                                              (view-element :unit x state html-use-prefix component-name))
                                     :group  (for [x (concat unit-elements group-elements)]
-                                              (view-element x state html-use-prefix component-name))
+                                              (view-element :group x state html-use-prefix component-name))
                                     }}]
     view-map))
 
