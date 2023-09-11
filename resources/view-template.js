@@ -16,19 +16,19 @@ const ID_{{id-descriptor}} = "{{id-value}}";
 
 // 全体を描画
 export function renderAll(state) {
-{{#view-elements}}
+{{#render-elements}}
     render{{name}}(state);
-{{/view-elements}}
+{{/render-elements}}
     return null;
 }
 
-{{#view-elements}}
+{{#render-elements}}
 // {{comment}}を描画
 export function render{{name}}(state) {
 {{{view-code}}}
 }
 
-{{/view-elements}}
+{{/render-elements}}
 
 //-----------------------------------------------------------------------------
 // HTML要素値取得

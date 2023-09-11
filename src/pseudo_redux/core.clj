@@ -317,29 +317,40 @@
 "    // TODO
     return null;")
 
+; ビュー要素
+(defn view-element
+  [element state use-prefix component-name]
+  (let [name (camel-to-pascal (:id element))
+        id-descriptor (camel-to-snake (:id element))]
+    {:id             (:id element)
+     :group          (:group element)
+     :id-descriptor  id-descriptor
+     :id-value       (if use-prefix
+                       (prefixed-name component-name (:id element))
+                       (:id element))
+     :name           name
+     :event          ((:type element) event-map)
+     :comment        (if-let [v (:name element)]
+                       (str (abbreviate-comment v) ((:type element) type-name-JP))
+                       name)
+     :view-code      (view-code element state id-descriptor)
+     }))
+
 ; ビュー要素マップ
 (defn view-map
   [defs state-map]
   (let [component-name  (get-in defs [:component :name])
         html-use-prefix (get-in defs [:component :html-use-prefix])
         html-elements   (get-in defs [:component :html-elements])
+        unit-elements   (filter #(nil? (:group %)) html-elements)
+        group-elements  (for [x (group-by :group (filter #(not (nil? (:group %))) html-elements))]
+                          (first (val x)))
         state           (:elements state-map)
-        view-map        {:elements (for [x html-elements]
-                                     (let [name (camel-to-pascal (:id x))
-                                           id-descriptor (camel-to-snake (:id x))]
-                                       {:id             (:id x)
-                                        :group          (:group x)
-                                        :id-descriptor  id-descriptor
-                                        :id-value       (if html-use-prefix
-                                                          (prefixed-name component-name (:id x))
-                                                          (:id x))
-                                        :name           name
-                                        :event          ((:type x) event-map)
-                                        :comment        (if-let [v (:name x)]
-                                                          (str (abbreviate-comment v) ((:type x) type-name-JP))
-                                                          name)
-                                        :view-code      (view-code x state id-descriptor)
-                                        }))}]
+        view-map        {:elements {:unit   (for [x html-elements]
+                                              (view-element x state html-use-prefix component-name))
+                                    :group  (for [x (concat unit-elements group-elements)]
+                                              (view-element x state html-use-prefix component-name))
+                                    }}]
     view-map))
 
 ; バインド変数マップ
@@ -355,7 +366,8 @@
           (assoc :action-elements (:elements action-map)))
       (if (= key :view)
         (-> common-map
-            (assoc :view-elements (:elements view-map)))
+            (assoc :view-elements (get-in view-map [:elements :unit]))
+            (assoc :render-elements (get-in view-map [:elements :group])))
         (-> common-map
             (assoc :state-elements (:elements state-map))
             (assoc :view-elements (:elements view-map))
