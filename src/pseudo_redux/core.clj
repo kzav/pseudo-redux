@@ -320,7 +320,7 @@
 ; ビュー要素
 (defn view-element
   [element state use-prefix component-name]
-  (let [name (camel-to-pascal (:id element))
+  (let [name (camel-to-pascal (if-let [v (:group element)] v (:id element)))
         id-descriptor (camel-to-snake (:id element))]
     {:id             (:id element)
      :group          (:group element)
