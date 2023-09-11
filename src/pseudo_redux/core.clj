@@ -320,10 +320,9 @@
 ; ビュー要素
 (defn view-element
   [kw element state use-prefix component-name]
-  (let [name (camel-to-pascal (if (and (= kw :group)
-                                       (not (nil? (:group element))))
-                                (:group element)
-                                (:id element)))
+  (let [is-group (and (= kw :group)
+                      (not (nil? (:group element))))
+        name (camel-to-pascal (if is-group (:group element) (:id element)))
         id-descriptor (camel-to-snake (:id element))]
     {:id             (:id element)
      :group          (:group element)
@@ -334,7 +333,7 @@
      :name           name
      :event          ((:type element) event-map)
      :comment        (if-let [v (:name element)]
-                       (str (abbreviate-comment v) ((:type element) type-name-JP))
+                       (str (if is-group (abbreviate-comment v) v) ((:type element) type-name-JP))
                        name)
      :view-code      (view-code element state id-descriptor)
      }))
