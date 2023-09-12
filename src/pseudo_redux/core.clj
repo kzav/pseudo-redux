@@ -91,10 +91,10 @@
 ; 状態識別子
 (defmulti state-id (fn [element] (:type element)))
 
-; テキスト型の状態識別子
-(defmethod state-id :text
-  [element]
-  (:id element))
+;; テキスト型の状態識別子
+;(defmethod state-id :text
+;  [element]
+;  (:id element))
 
 ; ドロップダウンリスト型の状態識別子
 (defmethod state-id :select
@@ -109,7 +109,7 @@
 ; その他の状態識別子
 (defmethod state-id :default
   [element]
-  nil)
+  (:id element))
 
 ; 状態初期値
 (defmulti state-value (fn [element] (:type element)))
@@ -129,17 +129,42 @@
   [element]
   "null")
 
+; 単体要素状態
+(defmulti unit-state (fn [element] (:type element)))
+
+; テーブル型の単体要素状態
+(defmethod unit-state :table
+  [element]
+  [
+   {:id           (:id element)
+    :state-id     (state-id element)
+    :state-value  "[]"
+    }
+   {:id           (:id element)
+    :state-id     (str "selected" (camel-to-pascal (:id element)) "Row")
+    :state-value  (state-value element)
+    }
+   ]
+  )
+
+; その他の単体要素状態
+(defmethod unit-state :default
+  [element]
+  {:id           (:id element)
+   :state-id     (state-id element)
+   :state-value  (state-value element)
+   })
+
 ; 状態要素マップ
 (defn state-map
   [defs]
   (let [html-elements   (get-in defs [:component :html-elements])
         unit-elements   (filter #(nil? (:group %)) html-elements)
         group-elements  (filter #(not (nil? (:group %))) html-elements)
-        unit-state      (for [x unit-elements :when (some #(= (:type x) %) [:text :select])]
-                          {:id           (:id x)
-                           :state-id     (state-id x)
-                           :state-value  (state-value x)
-                           })
+        unit-state      (flatten
+                          (for [x unit-elements
+                                :when (some #(= (:type x) %) [:text :select :table])]
+                            (unit-state x)))
         group-state     (if (empty? group-elements)
                           []
                           (for [x (group-by :group group-elements)]
@@ -311,11 +336,75 @@
     ");\n"
     "    return input;"))
 
+; テーブル型のビュー実装
+(defmethod view-code :table
+  [element state id-descriptor]
+  (str
+    "    let table = core.getElement("
+    id-descriptor
+    ");\n"
+    "    clearElements(table);\n"
+    "//    state."
+    (:state-id (first (filter #(= (:id %) (:id element)) state)))
+    ".forEach(x => {\n"
+    "//        let tr = core.addNewTag(\n"
+    "//            table,\n"
+    "//            'tr',\n"
+    "//            [],\n"
+    "//            [\n"
+    "//              { name: 'id', val: '【行を特定可能な識別子】' },\n"
+    "//              { name: 'style', val: 'border: 1px solid #A1A1A1' },\n"
+    "//              { name: 'onmouseover', val: 'tableMouseOver(this)' },\n"
+    "//              { name: 'onmouseout', val: 'tableMouseOut(this)' }\n"
+    "//            ]);\n"
+    "//        tr.addEventListener('click', "
+    (s/lower-case (:id element))
+    "RowSelector, false);\n"
+    "//        let td = core.addNewTag(tr, 'td', [], []);\n"
+    "//        td.textContent = x.【カラム1】;\n"
+    "//        td = core.addNewTag(tr, 'td', [], []);\n"
+    "//        td.textContent = x.【カラム2】;\n"
+    "//        td = core.addNewTag(tr, 'td', [], []);\n"
+    "//        td.textContent = x.【カラム3】;\n"
+    "//    });\n"
+    "    return table;"))
+
 ; その他のビュー実装
 (defmethod view-code :default
   [element state id-descriptor]
 "    // TODO
     return null;")
+
+; バインド実装
+(defmulti bind-code (fn [element id-descriptor name event] (:type element)))
+
+; テーブル型のバインド実装
+(defmethod bind-code :table
+  [element id-descriptor name event]
+  (let [lower-name (s/lower-case name)]
+    (str "let "
+         lower-name
+         "RowSelector = null;\n"
+         "export function bind"
+         name
+         "RowSelector(actionCreator) {\n"
+         "    "
+         lower-name
+         "RowSelector = actionCreator;\n"
+         "}")))
+
+; その他のバインド実装
+(defmethod bind-code :default
+  [element id-descriptor name event]
+  (str "export function bind"
+       name
+       "(actionCreator) {\n"
+       "    return util.bind(ID_"
+       id-descriptor
+       ", \""
+       event
+       "\", actionCreator);\n"
+       "}"))
 
 ; ビュー要素
 (defn view-element
@@ -323,7 +412,8 @@
   (let [is-group (and (= kw :group)
                       (not (nil? (:group element))))
         name (camel-to-pascal (if is-group (:group element) (:id element)))
-        id-descriptor (camel-to-snake (:id element))]
+        id-descriptor (camel-to-snake (:id element))
+        event ((:type element) event-map)]
     {:id             (:id element)
      :group          (:group element)
      :id-descriptor  id-descriptor
@@ -331,11 +421,12 @@
                        (prefixed-name component-name (:id element))
                        (:id element))
      :name           name
-     :event          ((:type element) event-map)
+     :event          event
      :comment        (if-let [v (:name element)]
                        (str (if is-group (abbreviate-comment v) v) ((:type element) type-name-JP))
                        name)
      :view-code      (view-code element state (str "ID_" id-descriptor))
+     :bind-code      (bind-code element id-descriptor name event)
      }))
 
 ; ビュー要素マップ

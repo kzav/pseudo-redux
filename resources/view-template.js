@@ -44,8 +44,6 @@ export function render{{name}}(state) {
 
 {{#view-elements}}
 // {{comment}}をバインド
-export function bind{{name}}(actionCreator) {
-    return util.bind(ID_{{id-descriptor}}, "{{event}}", actionCreator);
-}
+{{{bind-code}}}
 
 {{/view-elements}}
