@@ -414,19 +414,20 @@
         name (camel-to-pascal (if is-group (:group element) (:id element)))
         id-descriptor (camel-to-snake (:id element))
         event ((:type element) event-map)]
-    {:id             (:id element)
-     :group          (:group element)
-     :id-descriptor  id-descriptor
-     :id-value       (if use-prefix
-                       (prefixed-name component-name (:id element))
-                       (:id element))
-     :name           name
-     :event          event
-     :comment        (if-let [v (:name element)]
-                       (str (if is-group (abbreviate-comment v) v) ((:type element) type-name-JP))
-                       name)
-     :view-code      (view-code element state (str "ID_" id-descriptor))
-     :bind-code      (bind-code element id-descriptor name event)
+    {:type          (:type element)
+     :id            (:id element)
+     :group         (:group element)
+     :id-descriptor id-descriptor
+     :id-value      (if use-prefix
+                      (prefixed-name component-name (:id element))
+                      (:id element))
+     :name          name
+     :event         event
+     :comment       (if-let [v (:name element)]
+                      (str (if is-group (abbreviate-comment v) v) ((:type element) type-name-JP))
+                      name)
+     :view-code     (view-code element state (str "ID_" id-descriptor))
+     :bind-code     (bind-code element id-descriptor name event)
      }))
 
 ; ビュー要素マップ
@@ -466,9 +467,11 @@
             (assoc :view-elements (get-in view-map [:elements :unit]))
             (assoc :action-elements (:elements action-map))
             (assoc :bind-elements (for [x (get-in view-map [:elements :unit]) y (:elements action-map)
-                                        :when (or
-                                                (= (:id x) (:id y))
-                                                (= (:group x) (:id y)))]
+                                        :when (and
+                                                (not= (:type x) :table)
+                                                (or
+                                                  (= (:id x) (:id y))
+                                                  (= (:group x) (:id y))))]
                                     {:bind-name (:name x)
                                      :action-name (:name y)})))))))
 
