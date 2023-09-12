@@ -447,6 +447,21 @@
                                     }}]
     view-map))
 
+; バインド要素
+(defmulti bind-element (fn [element action] (:type element)))
+
+; その他のバインド要素
+(defmethod bind-element :table
+  [element action]
+  {:bind-name (str (:name element) "RowSelector")
+   :action-name (:name action)})
+
+; その他のバインド要素
+(defmethod bind-element :default
+  [element action]
+  {:bind-name (:name element)
+   :action-name (:name action)})
+
 ; バインド変数マップ
 (defn variable-map
   [key defs]
@@ -467,13 +482,11 @@
             (assoc :view-elements (get-in view-map [:elements :unit]))
             (assoc :action-elements (:elements action-map))
             (assoc :bind-elements (for [x (get-in view-map [:elements :unit]) y (:elements action-map)
-                                        :when (and
-                                                (not= (:type x) :table)
-                                                (or
-                                                  (= (:id x) (:id y))
-                                                  (= (:group x) (:id y))))]
-                                    {:bind-name (:name x)
-                                     :action-name (:name y)})))))))
+                                        :when (or
+                                                (= (:id x) (:id y))
+                                                (= (:group x) (:id y)))]
+                                    (bind-element x y)
+                                    )))))))
 
 ; ソースファイルを出力
 (defn output-file
