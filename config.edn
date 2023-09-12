@@ -1,0 +1,132 @@
+{
+ ; HTML要素別イベント
+ :event-map {:label  "click"
+             :text   "change"
+             :select "change"
+             :check  "click"
+             :radio  "change"
+             :button "click"
+             :table  "click"}
+
+ ; HTML要素別動作
+ :verb-map {:label  ""
+            :text   "change"
+            :select "change"
+            :check  "change"
+            :radio  "change"
+            :button "click"
+            :table  "select"}
+
+ ; 要素タイプの和名
+ :type-name-JP {:label  "ラベル"
+                :text   "テキスト"
+                :select "ドロップダウンリスト"
+                :check  "チェックボックス"
+                :radio  "ラジオボタン"
+                :button "ボタン"
+                :table  "テーブル"}
+
+ ; 動詞の和名
+ :verb-name-JP {"change" "変更"
+                "select" "選択"}
+
+ ; アクション取得値
+ :action-value {:text     "currentTarget.value"
+                :select   "currentTarget.options[currentTarget.selectedIndex]"
+                :radio    "util.getCheckedRadioValue(currentTarget.name)"
+                :default  "currentTarget"
+                }
+
+ ; リデューサ実装
+ :reducer-code {:text     (str "state." (:state-id (first (filter #(= (:id %) (:id element)) state))) " = action.payload;")
+                :select   (str "state." (:state-id (first (filter #(= (:id %) (:id element)) state))) " = action.payload;")
+                :radio    (str "state." (:state-id (first (filter #(= (:id %) (:id element)) state))) " = action.payload;")
+                :default  "// TODO"
+                }
+
+ ; ビュー実装
+ :view-code {:text    (str
+                        "    let input = core.getElement("
+                        id-descriptor
+                        ");\n"
+                        "    input.value = state."
+                        (:state-id (first (filter #(= (:id %) (:id element)) state)))
+                        ";\n"
+                        "    return input;")
+             :select  (str
+                        "    let input = core.getElement("
+                        id-descriptor
+                        ");\n"
+                        "    input.value = state."
+                        (:state-id (first (filter #(= (:id %) (:id element)) state)))
+                        ".value;\n"
+                        "    return input;")
+             :radio   (str
+                        "    util.setCheckedRadioValue(\""
+                        (:group element)
+                        "\", state."
+                        (:state-id (first (filter #(= (:id %) (:group element)) state)))
+                        ");\n"
+                        "    return null;")
+             :button  (str
+                        "    let input = core.getElement("
+                        id-descriptor
+                        ");\n"
+                        "    return input;")
+             :table   (str
+                        "    let table = core.getElement("
+                        id-descriptor
+                        ");\n"
+                        "    core.removeChildren(table);\n"
+                        "//    state."
+                        (:state-id (first (filter #(= (:id %) (:id element)) state)))
+                        ".forEach(x => {\n"
+                        "//        let tr = core.addNewTag(\n"
+                        "//            table,\n"
+                        "//            'tr',\n"
+                        "//            [],\n"
+                        "//            [\n"
+                        "//              { name: 'id', val: '【行を特定可能な識別子】' },\n"
+                        "//              { name: 'style', val: 'border: 1px solid #A1A1A1' },\n"
+                        "//              { name: 'onmouseover', val: 'tableMouseOver(this)' },\n"
+                        "//              { name: 'onmouseout', val: 'tableMouseOut(this)' }\n"
+                        "//            ]);\n"
+                        "//        tr.addEventListener('click', "
+                        (s/lower-case (:id element))
+                        "RowSelector, false);\n"
+                        "//        let td = core.addNewTag(tr, 'td', [], []);\n"
+                        "//        td.textContent = x.【カラム1】;\n"
+                        "//        td = core.addNewTag(tr, 'td', [], []);\n"
+                        "//        td.textContent = x.【カラム2】;\n"
+                        "//        td = core.addNewTag(tr, 'td', [], []);\n"
+                        "//        td.textContent = x.【カラム3】;\n"
+                        "//    });\n"
+                        "    return table;")
+             :default (str
+                        "    // TODO\n"
+                        "return null;")
+             }
+
+ ; バインド実装
+ :bind-code {:table   (let [lower-name (s/lower-case name)]
+                        (str "let "
+                          lower-name
+                          "RowSelector = null;\n"
+                          "export function bind"
+                          name
+                          "RowSelector(actionCreator) {\n"
+                          "    "
+                          lower-name
+                          "RowSelector = actionCreator;\n"
+                          "}"))
+             :default (str "export function bind"
+                        name
+                        "(actionCreator) {\n"
+                        "    return util.bind(ID_"
+                        id-descriptor
+                        ", \""
+                        event
+                        "\", actionCreator);\n"
+                        "}")
+             }
+}

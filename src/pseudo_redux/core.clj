@@ -6,34 +6,8 @@
   (:import (java.io PushbackReader))
   (:gen-class))
 
-(def event-map {:label  "click"
-                :text   "change"
-                :select "change"
-                :check  "click"
-                :radio  "change"
-                :button "click"
-                :table  "click"})
-
-(def verb-map {:label  ""
-               :text   "change"
-               :select "change"
-               :check  "change"
-               :radio  "change"
-               :button "click"
-               :table  "select"})
-
-; 要素タイプの和名
-(def type-name-JP {:label  "ラベル"
-                   :text   "テキスト"
-                   :select "ドロップダウンリスト"
-                   :check  "チェックボックス"
-                   :radio  "ラジオボタン"
-                   :button "ボタン"
-                   :table  "テーブル"})
-
-; 動詞の和名
-(def verb-name-JP {"change" "変更"
-                   "select" "選択"})
+; 構成情報
+(def config (atom {}))
 
 ; キャメルタイプをスネークタイプに変換
 (defn camel-to-snake
@@ -64,7 +38,7 @@
 ; 動詞
 (defn verb
   [id type]
-  (str (type verb-map) (camel-to-pascal id)))
+  (str (type (:verb-map @config)) (camel-to-pascal id)))
 
 ; 定義ファイルを読み込む
 (defn read-def
@@ -218,22 +192,22 @@
 ; テキスト型のアクション取得値
 (defmethod action-value :text
   [element]
-  "currentTarget.value")
+  (get-in @config [:action-value :text]))
 
 ; ドロップダウンリスト型のアクション取得値
 (defmethod action-value :select
   [element]
-  "currentTarget.options[currentTarget.selectedIndex]")
+  (get-in @config [:action-value :select]))
 
 ; ラジオボタン型のアクション取得値
 (defmethod action-value :radio
   [element]
-  "util.getCheckedRadioValue(currentTarget.name)")
+  (get-in @config [:action-value :radio]))
 
 ; その他のアクション取得値
 (defmethod action-value :default
   [element]
-  "currentTarget")
+  (get-in @config [:action-value :default]))
 
 ; リデューサ実装
 (defmulti reducer-code (fn [element state] (:type element)))
@@ -241,22 +215,22 @@
 ; テキスト型のリデューサ実装
 (defmethod reducer-code :text
   [element state]
-  (str "state." (:state-id (first (filter #(= (:id %) (:id element)) state))) " = action.payload;"))
+  (get-in @config [:reducer-code :text]))
 
 ; ドロップダウンリスト型のリデューサ実装
 (defmethod reducer-code :select
   [element state]
-  (str "state." (:state-id (first (filter #(= (:id %) (:id element)) state))) " = action.payload;"))
+  (get-in @config [:reducer-code :select]))
 
 ; ラジオボタン型のリデューサ実装
 (defmethod reducer-code :radio
   [element state]
-  (str "state." (:state-id (first (filter #(= (:id %) (:group element)) state))) " = action.payload;"))
+  (get-in @config [:reducer-code :radio]))
 
 ; その他のリデューサ実装
 (defmethod reducer-code :default
   [element state]
-  "// TODO")
+  (get-in @config [:reducer-code :default]))
 
 ; アクション要素マップ
 (defn action-map
@@ -272,7 +246,7 @@
         action-map      {:elements (for [x html-elements]
                                      (let [verb-string  (if (contains? x :action)
                                                           (:action x)
-                                                          ((:type x) verb-map))
+                                                          ((:type x) (:verb-map @config)))
                                            name         (action-name x)]
                                        {:id             (action-id x)
                                         :id-descriptor  (camel-to-snake name)
@@ -282,7 +256,7 @@
                                                             name))
                                         :name           name
                                         :comment        (if-let [v (:name x)]
-                                                          (str (abbreviate-comment v) (get verb-name-JP verb-string))
+                                                          (str (abbreviate-comment v) (get (:verb-name-JP @config) verb-string))
                                                           name)
                                         :action-value   (action-value x)
                                         :reducer-code    (reducer-code x state)
@@ -295,85 +269,32 @@
 ; テキスト型のビュー実装
 (defmethod view-code :text
   [element state id-descriptor]
-  (str
-    "    let input = core.getElement("
-    id-descriptor
-    ");\n"
-    "    input.value = state."
-    (:state-id (first (filter #(= (:id %) (:id element)) state)))
-    ";\n"
-    "    return input;"))
+  (get-in @config [:view-code :text]))
 
 ; ドロップダウンリスト型のビュー実装
 (defmethod view-code :select
   [element state id-descriptor]
-  (str
-    "    let input = core.getElement("
-    id-descriptor
-    ");\n"
-    "    input.value = state."
-    (:state-id (first (filter #(= (:id %) (:id element)) state)))
-    ".value;\n"
-    "    return input;"))
+  (get-in @config [:view-code :select]))
 
 ; ラジオボタン型のビュー実装
 (defmethod view-code :radio
   [element state id-descriptor]
-  (str
-    "    util.setCheckedRadioValue(\""
-    (:group element)
-    "\", state."
-    (:state-id (first (filter #(= (:id %) (:group element)) state)))
-    ");\n"
-    "    return null;"))
+  (get-in @config [:view-code :radio]))
 
 ; ボタン型のビュー実装
 (defmethod view-code :button
   [element state id-descriptor]
-  (str
-    "    let input = core.getElement("
-    id-descriptor
-    ");\n"
-    "    return input;"))
+  (get-in @config [:view-code :button]))
 
 ; テーブル型のビュー実装
 (defmethod view-code :table
   [element state id-descriptor]
-  (str
-    "    let table = core.getElement("
-    id-descriptor
-    ");\n"
-    "    core.removeChildren(table);\n"
-    "//    state."
-    (:state-id (first (filter #(= (:id %) (:id element)) state)))
-    ".forEach(x => {\n"
-    "//        let tr = core.addNewTag(\n"
-    "//            table,\n"
-    "//            'tr',\n"
-    "//            [],\n"
-    "//            [\n"
-    "//              { name: 'id', val: '【行を特定可能な識別子】' },\n"
-    "//              { name: 'style', val: 'border: 1px solid #A1A1A1' },\n"
-    "//              { name: 'onmouseover', val: 'tableMouseOver(this)' },\n"
-    "//              { name: 'onmouseout', val: 'tableMouseOut(this)' }\n"
-    "//            ]);\n"
-    "//        tr.addEventListener('click', "
-    (s/lower-case (:id element))
-    "RowSelector, false);\n"
-    "//        let td = core.addNewTag(tr, 'td', [], []);\n"
-    "//        td.textContent = x.【カラム1】;\n"
-    "//        td = core.addNewTag(tr, 'td', [], []);\n"
-    "//        td.textContent = x.【カラム2】;\n"
-    "//        td = core.addNewTag(tr, 'td', [], []);\n"
-    "//        td.textContent = x.【カラム3】;\n"
-    "//    });\n"
-    "    return table;"))
+  (get-in @config [:view-code :table]))
 
 ; その他のビュー実装
 (defmethod view-code :default
   [element state id-descriptor]
-"    // TODO
-    return null;")
+  (get-in @config [:view-code :default]))
 
 ; バインド実装
 (defmulti bind-code (fn [element id-descriptor name event] (:type element)))
@@ -381,30 +302,12 @@
 ; テーブル型のバインド実装
 (defmethod bind-code :table
   [element id-descriptor name event]
-  (let [lower-name (s/lower-case name)]
-    (str "let "
-         lower-name
-         "RowSelector = null;\n"
-         "export function bind"
-         name
-         "RowSelector(actionCreator) {\n"
-         "    "
-         lower-name
-         "RowSelector = actionCreator;\n"
-         "}")))
+  (get-in @config [:bind-code :table]))
 
 ; その他のバインド実装
 (defmethod bind-code :default
   [element id-descriptor name event]
-  (str "export function bind"
-       name
-       "(actionCreator) {\n"
-       "    return util.bind(ID_"
-       id-descriptor
-       ", \""
-       event
-       "\", actionCreator);\n"
-       "}"))
+  (get-in @config [:bind-code :default]))
 
 ; ビュー要素
 (defn view-element
@@ -413,7 +316,7 @@
                       (not (nil? (:group element))))
         name (camel-to-pascal (if is-group (:group element) (:id element)))
         id-descriptor (camel-to-snake (:id element))
-        event ((:type element) event-map)]
+        event ((:type element) (:event-map @config))]
     {:type          (:type element)
      :id            (:id element)
      :group         (:group element)
@@ -424,7 +327,7 @@
      :name          name
      :event         event
      :comment       (if-let [v (:name element)]
-                      (str (if is-group (abbreviate-comment v) v) ((:type element) type-name-JP))
+                      (str (if is-group (abbreviate-comment v) v) ((:type element) (:type-name-JP @config)))
                       name)
      :view-code     (view-code element state (str "ID_" id-descriptor))
      :bind-code     (bind-code element id-descriptor name event)
@@ -519,6 +422,7 @@
 (defn pdx
   [path]
   (let [defs (convert-all-html-element-type-keyword-to-lower-case (read-def path))]
+    (reset! config (read-def "config.edn"))
     (doseq [x (:templates defs)]
       (output-file x defs))))
 
