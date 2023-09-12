@@ -343,7 +343,7 @@
     "    let table = core.getElement("
     id-descriptor
     ");\n"
-    "    clearElements(table);\n"
+    "    core.removeChildren(table);\n"
     "//    state."
     (:state-id (first (filter #(= (:id %) (:id element)) state)))
     ".forEach(x => {\n"
