@@ -38,95 +38,56 @@
                 }
 
  ; リデューサ実装
- :reducer-code {:text     (str "state." (:state-id (first (filter #(= (:id %) (:id element)) state))) " = action.payload;")
-                :select   (str "state." (:state-id (first (filter #(= (:id %) (:id element)) state))) " = action.payload;")
-                :radio    (str "state." (:state-id (first (filter #(= (:id %) (:id element)) state))) " = action.payload;")
+ :reducer-code {:text     "state.{{state-id}} = action.payload;"
+                :select   "state.{{state-id}} = action.payload;"
+                :radio    "state.{{state-id}} = action.payload;"
                 :default  "// TODO"
                 }
 
  ; ビュー実装
- :view-code {:text    (str
-                        "    let input = core.getElement("
-                        id-descriptor
-                        ");\n"
-                        "    input.value = state."
-                        (:state-id (first (filter #(= (:id %) (:id element)) state)))
-                        ";\n"
-                        "    return input;")
-             :select  (str
-                        "    let input = core.getElement("
-                        id-descriptor
-                        ");\n"
-                        "    input.value = state."
-                        (:state-id (first (filter #(= (:id %) (:id element)) state)))
-                        ".value;\n"
-                        "    return input;")
-             :radio   (str
-                        "    util.setCheckedRadioValue(\""
-                        (:group element)
-                        "\", state."
-                        (:state-id (first (filter #(= (:id %) (:group element)) state)))
-                        ");\n"
-                        "    return null;")
-             :button  (str
-                        "    let input = core.getElement("
-                        id-descriptor
-                        ");\n"
-                        "    return input;")
-             :table   (str
-                        "    let table = core.getElement("
-                        id-descriptor
-                        ");\n"
-                        "    core.removeChildren(table);\n"
-                        "//    state."
-                        (:state-id (first (filter #(= (:id %) (:id element)) state)))
-                        ".forEach(x => {\n"
-                        "//        let tr = core.addNewTag(\n"
-                        "//            table,\n"
-                        "//            'tr',\n"
-                        "//            [],\n"
-                        "//            [\n"
-                        "//              { name: 'id', val: '【行を特定可能な識別子】' },\n"
-                        "//              { name: 'style', val: 'border: 1px solid #A1A1A1' },\n"
-                        "//              { name: 'onmouseover', val: 'tableMouseOver(this)' },\n"
-                        "//              { name: 'onmouseout', val: 'tableMouseOut(this)' }\n"
-                        "//            ]);\n"
-                        "//        tr.addEventListener('click', "
-                        (s/lower-case (:id element))
-                        "RowSelector, false);\n"
-                        "//        let td = core.addNewTag(tr, 'td', [], []);\n"
-                        "//        td.textContent = x.【カラム1】;\n"
-                        "//        td = core.addNewTag(tr, 'td', [], []);\n"
-                        "//        td.textContent = x.【カラム2】;\n"
-                        "//        td = core.addNewTag(tr, 'td', [], []);\n"
-                        "//        td.textContent = x.【カラム3】;\n"
-                        "//    });\n"
-                        "    return table;")
-             :default (str
-                        "    // TODO\n"
-                        "return null;")
-             }
+ :view-code {:text    "    let input = core.getElement({{id-descriptor}});
+    input.value = state.{{state-id}};
+    return input;"
+             :select  "    let input = core.getElement({{id-descriptor}});
+    input.value = state.{{state-id}}.value;
+    return input;"
+             :radio   "    util.setCheckedRadioValue(\"{{group}}\", state.{{state-id}});
+    return null;"
+             :button  "    let input = core.getElement({{id-descriptor}});
+    return input;"
+             :table   "    let table = core.getElement({{id-descriptor}});
+    core.removeChildren(table);
+//    state.{{state-id}}.forEach(x => {
+//        let tr = core.addNewTag(
+//            table,
+//            'tr',
+//            [],
+//            [
+//              { name: 'id', val: '【行を特定可能な識別子】' },
+//              { name: 'style', val: 'border: 1px solid #A1A1A1' },
+//              { name: 'onmouseover', val: 'tableMouseOver(this)' },
+//              { name: 'onmouseout', val: 'tableMouseOut(this)' }
+//            ]);
+//        tr.addEventListener('click', {{lower-id}}RowSelector, false);
+//        let td = core.addNewTag(tr, 'td', [], []);
+//        td.textContent = x.【カラム1】;
+//        td = core.addNewTag(tr, 'td', [], []);
+//        td.textContent = x.【カラム2】;
+//        td = core.addNewTag(tr, 'td', [], []);
+//        td.textContent = x.【カラム3】;
+//    });
+    return table;"
+             :default "    // TODO
+    return null;"
+}
 
- ; バインド実装
- :bind-code {:table   (let [lower-name (s/lower-case name)]
-                        (str "let "
-                          lower-name
-                          "RowSelector = null;\n"
-                          "export function bind"
-                          name
-                          "RowSelector(actionCreator) {\n"
-                          "    "
-                          lower-name
-                          "RowSelector = actionCreator;\n"
-                          "}"))
-             :default (str "export function bind"
-                        name
-                        "(actionCreator) {\n"
-                        "    return util.bind(ID_"
-                        id-descriptor
-                        ", \""
-                        event
-                        "\", actionCreator);\n"
-                        "}")
-             }
+; バインド実装
+:bind-code {:table   "let {{lower-name}}RowSelector = null;
+export function bind{{name}}RowSelector(actionCreator) {
+    {{lower-name}}RowSelector = actionCreator;
+}"
+            :default "export function bind{{name}}(actionCreator) {
+    return util.bind(ID_{{id-descriptor}}, \"{{event}}\", actionCreator);
+}"
+            }
 }

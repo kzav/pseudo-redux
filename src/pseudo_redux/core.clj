@@ -215,17 +215,26 @@
 ; テキスト型のリデューサ実装
 (defmethod reducer-code :text
   [element state]
-  (get-in @config [:reducer-code :text]))
+  (let [code (get-in @config [:reducer-code :text])
+        state-id (:state-id (first (filter #(= (:id %) (:id element)) state)))]
+    (-> code
+        (s/replace "{{state-id}}" state-id))))
 
 ; ドロップダウンリスト型のリデューサ実装
 (defmethod reducer-code :select
   [element state]
-  (get-in @config [:reducer-code :select]))
+  (let [code (get-in @config [:reducer-code :select])
+        state-id (:state-id (first (filter #(= (:id %) (:id element)) state)))]
+    (-> code
+        (s/replace "{{state-id}}" state-id))))
 
 ; ラジオボタン型のリデューサ実装
 (defmethod reducer-code :radio
   [element state]
-  (get-in @config [:reducer-code :radio]))
+  (let [code (get-in @config [:reducer-code :radio])
+        state-id (:state-id (first (filter #(= (:id %) (:group element)) state)))]
+    (-> code
+        (s/replace "{{state-id}}" state-id))))
 
 ; その他のリデューサ実装
 (defmethod reducer-code :default
@@ -269,27 +278,48 @@
 ; テキスト型のビュー実装
 (defmethod view-code :text
   [element state id-descriptor]
-  (get-in @config [:view-code :text]))
+  (let [code (get-in @config [:view-code :text])
+        state-id (:state-id (first (filter #(= (:id %) (:id element)) state)))]
+    (-> code
+        (s/replace "{{id-descriptor}}" id-descriptor)
+        (s/replace "{{state-id}}" state-id))))
 
 ; ドロップダウンリスト型のビュー実装
 (defmethod view-code :select
   [element state id-descriptor]
-  (get-in @config [:view-code :select]))
+  (let [code (get-in @config [:view-code :select])
+        state-id (:state-id (first (filter #(= (:id %) (:id element)) state)))]
+    (-> code
+        (s/replace "{{id-descriptor}}" id-descriptor)
+        (s/replace "{{state-id}}" state-id))))
 
 ; ラジオボタン型のビュー実装
 (defmethod view-code :radio
   [element state id-descriptor]
-  (get-in @config [:view-code :radio]))
+  (let [code (get-in @config [:view-code :radio])
+        group (:group element)
+        state-id (:state-id (first (filter #(= (:id %) (:group element)) state)))]
+    (-> code
+        (s/replace "{{group}}" group)
+        (s/replace "{{state-id}}" state-id))))
 
 ; ボタン型のビュー実装
 (defmethod view-code :button
   [element state id-descriptor]
-  (get-in @config [:view-code :button]))
+  (let [code (get-in @config [:view-code :button])]
+    (-> code
+        (s/replace "{{id-descriptor}}" id-descriptor))))
 
 ; テーブル型のビュー実装
 (defmethod view-code :table
   [element state id-descriptor]
-  (get-in @config [:view-code :table]))
+  (let [code (get-in @config [:view-code :table])
+        state-id (:state-id (first (filter #(= (:id %) (:id element)) state)))
+        lower-id (s/lower-case (:id element))]
+    (-> code
+        (s/replace "{{id-descriptor}}" id-descriptor)
+        (s/replace "{{state-id}}" state-id)
+        (s/replace "{{lower-id}}" lower-id))))
 
 ; その他のビュー実装
 (defmethod view-code :default
@@ -302,12 +332,20 @@
 ; テーブル型のバインド実装
 (defmethod bind-code :table
   [element id-descriptor name event]
-  (get-in @config [:bind-code :table]))
+  (let [code (get-in @config [:bind-code :table])
+        lower-name (s/lower-case name)]
+    (-> code
+        (s/replace "{{name}}" name)
+        (s/replace "{{lower-name}}" lower-name))))
 
 ; その他のバインド実装
 (defmethod bind-code :default
   [element id-descriptor name event]
-  (get-in @config [:bind-code :default]))
+  (let [code (get-in @config [:bind-code :default])]
+    (-> code
+        (s/replace "{{name}}" name)
+        (s/replace "{{id-descriptor}}" id-descriptor)
+        (s/replace "{{event}}" event))))
 
 ; ビュー要素
 (defn view-element
