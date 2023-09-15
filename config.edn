@@ -33,6 +33,7 @@
  ; アクション取得値
  :action-value {:text     "currentTarget.value"
                 :select   "currentTarget.options[currentTarget.selectedIndex]"
+                :check    "currentTarget.checked"
                 :radio    "util.getCheckedRadioValue(currentTarget.name)"
                 :default  "currentTarget"
                 }
@@ -40,6 +41,7 @@
  ; リデューサ実装
  :reducer-code {:text     "state.{{state-id}} = action.payload;"
                 :select   "state.{{state-id}} = action.payload;"
+                :check    "state.{{state-id}} = action.payload;"
                 :radio    "state.{{state-id}} = action.payload;"
                 :default  "// TODO"
                 }
@@ -50,6 +52,9 @@
     return input;"
              :select  "    let input = core.getElement({{id-descriptor}});
     input.value = state.{{state-id}}.value;
+    return input;"
+             :check   "    let input = core.getElement({{id-descriptor}});
+    input.checked = state.{{state-id}};
     return input;"
              :radio   "    util.setCheckedRadioValue(\"{{group}}\", state.{{state-id}});
     return null;"

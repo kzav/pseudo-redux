@@ -65,11 +65,6 @@
 ; 状態識別子
 (defmulti state-id (fn [element] (:type element)))
 
-;; テキスト型の状態識別子
-;(defmethod state-id :text
-;  [element]
-;  (:id element))
-
 ; ドロップダウンリスト型の状態識別子
 (defmethod state-id :select
   [element]
@@ -92,6 +87,11 @@
 (defmethod state-value :text
   [element]
   "\"\"")
+
+; チェックボックス型の状態初期値
+(defmethod state-value :check
+  [element]
+  "false")
 
 ; ラジオボタン型の状態初期値
 (defmethod state-value :radio
@@ -137,7 +137,7 @@
         group-elements  (filter #(not (nil? (:group %))) html-elements)
         unit-state      (flatten
                           (for [x unit-elements
-                                :when (some #(= (:type x) %) [:text :select :table])]
+                                :when (some #(= (:type x) %) [:text :select :check :table])]
                             (unit-state x)))
         group-state     (if (empty? group-elements)
                           []
@@ -199,6 +199,11 @@
   [element]
   (get-in @config [:action-value :select]))
 
+; チェックボックス型のアクション取得値
+(defmethod action-value :check
+  [element]
+  (get-in @config [:action-value :check]))
+
 ; ラジオボタン型のアクション取得値
 (defmethod action-value :radio
   [element]
@@ -224,6 +229,14 @@
 (defmethod reducer-code :select
   [element state]
   (let [code (get-in @config [:reducer-code :select])
+        state-id (:state-id (first (filter #(= (:id %) (:id element)) state)))]
+    (-> code
+        (s/replace "{{state-id}}" state-id))))
+
+; チェックボックス型のリデューサ実装
+(defmethod reducer-code :check
+  [element state]
+  (let [code (get-in @config [:reducer-code :check])
         state-id (:state-id (first (filter #(= (:id %) (:id element)) state)))]
     (-> code
         (s/replace "{{state-id}}" state-id))))
@@ -288,6 +301,15 @@
 (defmethod view-code :select
   [element state id-descriptor]
   (let [code (get-in @config [:view-code :select])
+        state-id (:state-id (first (filter #(= (:id %) (:id element)) state)))]
+    (-> code
+        (s/replace "{{id-descriptor}}" id-descriptor)
+        (s/replace "{{state-id}}" state-id))))
+
+; チェックボックス型のビュー実装
+(defmethod view-code :check
+  [element state id-descriptor]
+  (let [code (get-in @config [:view-code :check])
         state-id (:state-id (first (filter #(= (:id %) (:id element)) state)))]
     (-> code
         (s/replace "{{id-descriptor}}" id-descriptor)
