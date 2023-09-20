@@ -51,7 +51,9 @@
     input.value = state.{{state-id}};
     return input;"
              :select  "    let input = core.getElement({{id-descriptor}});
-    input.value = state.{{state-id}}.value;
+    if (state.{{state-id}}.value != null) {
+        input.value = state.{{state-id}}.value;
+    }
     return input;"
              :check   "    let input = core.getElement({{id-descriptor}});
     input.checked = state.{{state-id}};
