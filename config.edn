@@ -51,7 +51,7 @@
     input.value = state.{{state-id}};
     return input;"
              :select  "    let input = core.getElement({{id-descriptor}});
-    if (state.{{state-id}}.value != null) {
+    if (state.{{state-id}} != null) {
         input.value = state.{{state-id}}.value;
     }
     return input;"
