@@ -186,6 +186,19 @@
     (:action element)
     (verb (:id element) (:type element))))
 
+; アクション引数
+(defmulti action-arg (fn [element] (:type element)))
+
+; テキスト型のアクション引数
+(defmethod action-arg :text
+  [element]
+  (get-in @config [:action-arg :text]))
+
+; その他のアクション引数
+(defmethod action-arg :default
+  [element]
+  (get-in @config [:action-arg :default]))
+
 ; アクション取得値
 (defmulti action-value (fn [element] (:type element)))
 
@@ -280,6 +293,7 @@
                                         :comment        (if-let [v (:name x)]
                                                           (str (abbreviate-comment v) (get (:verb-name-JP @config) verb-string))
                                                           name)
+                                        :action-arg     (action-arg x)
                                         :action-value   (action-value x)
                                         :reducer-code    (reducer-code x state)
                                         }))}]

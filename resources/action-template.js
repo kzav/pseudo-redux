@@ -2,6 +2,7 @@
 
 import * as core from '../views/view-core';
 import * as util from '../views/view-util';
+import { isSmartPhone } from '../util';
 
 //-----------------------------------------------------------------------------
 // アクション タイプID
@@ -16,7 +17,7 @@ export const {{id-descriptor}} = "{{id-value}}";
 
 {{#action-elements}}
 // {{comment}}
-export function {{name}}Action({currentTarget}) {
+export function {{name}}Action({{action-arg}}) {
     return {
         type: {{id-descriptor}},
         payload: {{action-value}},

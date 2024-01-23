@@ -1,7 +1,8 @@
 {
  ; HTML要素別イベント
  :event-map {:label  "click"
-             :text   "change"
+             ;:text   "change"  ; フォーカス遷移時に入力
+             :text   "input"    ; キー押下時に入力
              :select "change"
              :check  "click"
              :radio  "change"
@@ -30,8 +31,21 @@
  :verb-name-JP {"change" "変更"
                 "select" "選択"}
 
+ ; アクション引数
+ :action-arg {:text    "e"
+              :default "{currentTarget}"
+              }
+
  ; アクション取得値
- :action-value {:text     "currentTarget.value"
+ :action-value {:text     "isSmartPhone() ?
+        {
+            valid: e.inputType !== 'insertCompositionText' ? true : false,
+            value: e.inputType !== 'insertCompositionText' ? e.currentTarget.value : null,
+        } :
+        {
+            valid: true,
+            value: e.currentTarget.value,
+        }"
                 :select   "currentTarget.options[currentTarget.selectedIndex]"
                 :check    "currentTarget.checked"
                 :radio    "util.getCheckedRadioValue(currentTarget.name)"
@@ -39,7 +53,9 @@
                 }
 
  ; リデューサ実装
- :reducer-code {:text     "state.{{state-id}} = action.payload;"
+ :reducer-code {:text     "if (action.payload.valid) {
+        state.{{state-id}} = action.payload.value;
+    }"
                 :select   "state.{{state-id}} = action.payload;"
                 :check    "state.{{state-id}} = action.payload;"
                 :radio    "state.{{state-id}} = action.payload;"
